@@ -98,21 +98,25 @@ enum LogId {
   CRASH,
 };
 
-using LogFunction = std::function<void(LogId, LogSeverity, const char*, const char*,
-                                       unsigned int, const char*)>;
-using AbortFunction = std::function<void(const char*)>;
+using LogFunction = std::function<void(LogId /*log_buffer_id*/,
+                                       LogSeverity /*severity*/,
+                                       const char* /*tag*/,
+                                       const char* /*file*/,
+                                       unsigned int /*line*/,
+                                       const char* /*message*/)>;
+using AbortFunction = std::function<void(const char* /*abort_message*/)>;
 
 // Loggers for use with InitLogging/SetLogger.
 
 // Log to the kernel log (dmesg).
-void KernelLogger(LogId, LogSeverity, const char*, const char*, unsigned int, const char*);
+void KernelLogger(LogId log_buffer_id, LogSeverity severity, const char* tag, const char* file, unsigned int line, const char* message);
 // Log to stderr in the full logcat format (with pid/tid/time/tag details).
-void StderrLogger(LogId, LogSeverity, const char*, const char*, unsigned int, const char*);
+void StderrLogger(LogId log_buffer_id, LogSeverity severity, const char* tag, const char* file, unsigned int line, const char* message);
 // Log just the message to stdout/stderr (without pid/tid/time/tag details).
 // The choice of stdout versus stderr is based on the severity.
 // Errors are also prefixed by the program name (as with err(3)/error(3)).
 // Useful for replacing printf(3)/perror(3)/err(3)/error(3) in command-line tools.
-void StdioLogger(LogId, LogSeverity, const char*, const char*, unsigned int, const char*);
+void StdioLogger(LogId log_buffer_id, LogSeverity severity, const char* tag, const char* file, unsigned int line, const char* message);
 
 void DefaultAborter(const char* abort_message);
 
@@ -151,11 +155,11 @@ void InitLogging(char* argv[],
                  AbortFunction&& aborter = DefaultAborter);
 #undef INIT_LOGGING_DEFAULT_LOGGER
 
-// Replace the current logger.
-void SetLogger(LogFunction&& logger);
+// Replace the current logger and return the old one.
+LogFunction SetLogger(LogFunction&& logger);
 
-// Replace the current aborter.
-void SetAborter(AbortFunction&& aborter);
+// Replace the current aborter and return the old one.
+AbortFunction SetAborter(AbortFunction&& aborter);
 
 // A helper macro that produces an expression that accepts both a qualified name and an
 // unqualified name for a LogSeverity, and returns a LogSeverity value.
@@ -303,20 +307,6 @@ struct LogAbortAfterFullExpr {
     }                                                                  \
   } while (false)
 
-// CHECK that can be used in a constexpr function. For example:
-//
-//    constexpr int half(int n) {
-//      return
-//          DCHECK_CONSTEXPR(n >= 0, , 0)
-//          CHECK_CONSTEXPR((n & 1) == 0),
-//              << "Extra debugging output: n = " << n, 0)
-//          n / 2;
-//    }
-#define CHECK_CONSTEXPR(x, out, dummy)                                     \
-  (UNLIKELY(!(x)))                                                         \
-      ? (LOG(FATAL) << "Check failed: " << #x out, dummy) \
-      :
-
 // DCHECKs are debug variants of CHECKs only enabled in debug builds. Generally
 // CHECK should be used unless profiling identifies a CHECK as being in
 // performance critical code.
@@ -344,11 +334,6 @@ static constexpr bool kEnableDChecks = true;
   if (::android::base::kEnableDChecks) CHECK_STREQ(s1, s2)
 #define DCHECK_STRNE(s1, s2) \
   if (::android::base::kEnableDChecks) CHECK_STRNE(s1, s2)
-#if defined(NDEBUG) && !defined(__clang_analyzer__)
-#define DCHECK_CONSTEXPR(x, out, dummy)
-#else
-#define DCHECK_CONSTEXPR(x, out, dummy) CHECK_CONSTEXPR(x, out, dummy)
-#endif
 
 namespace log_detail {
 
