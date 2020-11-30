@@ -33,7 +33,9 @@ cc_defaults {
 cc_library_headers {
     name: "libbase_headers",
     vendor_available: true,
+    product_available: true,
     ramdisk_available: true,
+    vendor_ramdisk_available: true,
     recovery_available: true,
     host_supported: true,
     native_bridge_supported: true,
@@ -108,13 +110,16 @@ cc_defaults {
             enabled: true,
         },
     },
+    min_sdk_version: "29",
 }
 
 cc_library {
     name: "libbase",
     defaults: ["libbase_defaults"],
     vendor_available: true,
+    product_available: true,
     ramdisk_available: true,
+    vendor_ramdisk_available: true,
     recovery_available: true,
     host_supported: true,
     native_bridge_supported: true,
@@ -133,7 +138,6 @@ cc_library {
         "//apex_available:anyapex",
         "//apex_available:platform",
     ],
-    min_sdk_version: "29",
 }
 
 cc_library_static {
@@ -240,4 +244,19 @@ cc_benchmark {
             suffix: "64",
         },
     },
+}
+
+cc_fuzz {
+    name: "libbase_parsenetaddress_fuzzer",
+    shared_libs: ["libbase"],
+    host_supported: true,
+    srcs: ["parsenetaddress_fuzzer.cpp"],
+    dictionary: "parsenetaddress_fuzzer.dict",
+
+    fuzz_config: {
+        cc: [
+            "android-bionic@google.com",
+        ],
+        componentid: 128577
+    }
 }
