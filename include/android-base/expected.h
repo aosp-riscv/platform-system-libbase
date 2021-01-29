@@ -330,7 +330,6 @@ class _NODISCARD_ expected {
   constexpr const T&& operator*() const&& { return std::move(std::get<T>(var_)); }
   constexpr T&& operator*() && { return std::move(std::get<T>(var_)); }
 
-  constexpr explicit operator bool() const noexcept { return has_value(); }
   constexpr bool has_value() const noexcept { return var_.index() == 0; }
   constexpr bool ok() const noexcept { return has_value(); }
 
@@ -380,7 +379,7 @@ class _NODISCARD_ expected {
 
   // Specialized algorithms
   template<class T1, class E1>
-  friend void swap(expected<T1, E1>&, expected<T1, E1>&) noexcept;
+  friend void swap(expected<T1, E1>& x, expected<T1, E1>& y) noexcept(noexcept(x.swap(y)));
 
  private:
   std::variant<value_type, unexpected_type> var_;
@@ -414,6 +413,11 @@ constexpr bool operator!=(const expected<T1, E1>& x, const unexpected<E2>& y) {
 template<class T1, class E1, class E2>
 constexpr bool operator!=(const unexpected<E2>& x, const expected<T1, E1>& y) {
   return y.has_value() || (x.value() != y.error());
+}
+
+template<class T1, class E1>
+void swap(expected<T1, E1>& x, expected<T1, E1>& y) noexcept(noexcept(x.swap(y))) {
+  x.swap(y);
 }
 
 template<class E>
@@ -553,7 +557,6 @@ class _NODISCARD_ expected<void, E> {
   }
 
   // observers
-  constexpr explicit operator bool() const noexcept { return has_value(); }
   constexpr bool has_value() const noexcept { return var_.index() == 0; }
   constexpr bool ok() const noexcept { return has_value(); }
 
@@ -570,7 +573,7 @@ class _NODISCARD_ expected<void, E> {
 
   // Specialized algorithms
   template<class T1, class E1>
-  friend void swap(expected<T1, E1>&, expected<T1, E1>&) noexcept;
+  friend void swap(expected<T1, E1>& x, expected<T1, E1>& y) noexcept(noexcept(x.swap(y)));
 
  private:
   std::variant<std::monostate, unexpected_type> var_;
